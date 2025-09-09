@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -99,7 +101,7 @@ func YuafengAPIResponseHandler(sources, song, singer string) MusicItem {
 		fmt.Println("[Warning] Lyric retrieval failed, skipping lyric file creation and download.")
 	} else if !strings.HasPrefix(lyricData, "http://") && !strings.HasPrefix(lyricData, "https://") {
 		// If it is not in link format, write the lyrics to the file line by line
-		lines := strings.Split(lyricData, "\r\n")
+		lines := strings.Split(lyricData, "\n")
 		lyricFilePath := filepath.Join(dirName, "lyric.lrc")
 		file, err := os.Create(lyricFilePath)
 		if err != nil {
@@ -108,7 +110,19 @@ func YuafengAPIResponseHandler(sources, song, singer string) MusicItem {
 		}
 		defer file.Close()
 
+		timeTagRegex := regexp.MustCompile(`^\[(\d+(?:\.\d+)?)\]`)
 		for _, line := range lines {
+			// Check if the line starts with a time tag
+			match := timeTagRegex.FindStringSubmatch(line)
+			if match != nil {
+				// Convert the time tag to [mm:ss.ms] format
+				timeInSeconds, _ := strconv.ParseFloat(match[1], 64)
+				minutes := int(timeInSeconds / 60)
+				seconds := int(timeInSeconds) % 60
+				milliseconds := int((timeInSeconds-float64(seconds))*1000) / 100 % 100
+				formattedTimeTag := fmt.Sprintf("[%02d:%02d.%02d]", minutes, seconds, milliseconds)
+				line = timeTagRegex.ReplaceAllString(line, formattedTimeTag)
+			}
 			_, err := file.WriteString(line + "\r\n")
 			if err != nil {
 				fmt.Println("[Error] Error writing to lyric file:", err)
