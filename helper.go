@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"os"
@@ -67,7 +66,7 @@ func createM3U8Playlist(outputDir string) error {
 	}
 
 	chunkDir := filepath.Join(outputDir, "chunk")
-	files, err := ioutil.ReadDir(chunkDir)
+	files, err := os.ReadDir(chunkDir)
 	if err != nil {
 		return err
 	}
@@ -223,7 +222,7 @@ func requestAndCacheMusic(song, singer string) {
 
 	// If no valid music item was found, return an empty MusicItem
 	if musicItem.Title == "" {
-		fmt.Println("[Warning] No valid music item retrieved.")
+		fmt.Printf("[Warning] No valid music item retrieved.\n")
 		return
 	}
 
@@ -236,7 +235,7 @@ func requestAndCacheMusic(song, singer string) {
 		fmt.Println("[Error] Error marshalling cache data:", err)
 		return
 	}
-	err = ioutil.WriteFile(cacheFile, cacheData, 0644)
+	err = os.WriteFile(cacheFile, cacheData, 0644)
 	if err != nil {
 		fmt.Println("[Error] Error writing cache file:", err)
 		return
@@ -247,7 +246,7 @@ func requestAndCacheMusic(song, singer string) {
 
 // Helper function to read music data from cache file
 func readFromCache(filePath string) (MusicItem, bool) {
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Println("[Error] Failed to read cache file:", err)
 		return MusicItem{}, false

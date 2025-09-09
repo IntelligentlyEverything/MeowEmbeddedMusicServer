@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,7 +43,7 @@ func YuafengAPIResponseHandler(sources, song, singer string) MusicItem {
 		return MusicItem{}
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("[Error] Error reading the response body from Yuafeng free API:", err)
 		return MusicItem{}

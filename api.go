@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -103,7 +102,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 // Read sources.json file and return a list of SourceItem.
 func readSources() []MusicItem {
-	data, err := ioutil.ReadFile("./sources.json")
+	data, err := os.ReadFile("./sources.json")
 	fmt.Println("[Info] Reading local sources.json")
 	if err != nil {
 		fmt.Println("[Error] Failed to read sources.json:", err)
@@ -124,7 +123,7 @@ func readSources() []MusicItem {
 func getLocalMusicItem(song, singer string) MusicItem {
 	musicDir := "./files/music"
 	fmt.Println("[Info] Reading local folder music.")
-	files, err := ioutil.ReadDir(musicDir)
+	files, err := os.ReadDir(musicDir)
 	if err != nil {
 		fmt.Println("[Error] Failed to read local music directory:", err)
 		return MusicItem{}
