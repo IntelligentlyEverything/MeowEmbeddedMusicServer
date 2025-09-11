@@ -148,11 +148,22 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	// Construct the complete file path
 	fullFilePath := filepath.Join("./files", filePath)
 
+	// Try replacing '+' with ' ' and check if the file exists
+	tempFilePath := strings.ReplaceAll(fullFilePath, "+", " ")
+	if _, err := os.Stat(tempFilePath); err == nil {
+		fullFilePath = tempFilePath
+	}
+
 	// Get file content
 	fileContent, err := GetFileContent(fullFilePath)
 	if err != nil {
-		NotFoundHandler(w, r)
-		return
+		// If file not found, try replacing ' ' with '+' and check again
+		tempFilePath = strings.ReplaceAll(fullFilePath, " ", "+")
+		fileContent, err = GetFileContent(tempFilePath)
+		if err != nil {
+			NotFoundHandler(w, r)
+			return
+		}
 	}
 
 	// Set appropriate Content-Type based on file extension
