@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,20 +27,20 @@ type YuafengAPIFreeResponse struct {
 // 枫雨API response handler.
 func YuafengAPIResponseHandler(sources, song, singer string) MusicItem {
 	fmt.Printf("[Info] Fetching music data from 枫林 free API for %s by %s\n", song, singer)
-	var url string
+	var APIurl string
 	switch sources {
 	case "kuwo":
-		url = "https://api.yuafeng.cn/API/ly/kwmusic.php"
+		APIurl = "https://api.yuafeng.cn/API/ly/kwmusic.php"
 	case "netease":
-		url = "https://api.yuafeng.cn/API/ly/wymusic.php"
+		APIurl = "https://api.yuafeng.cn/API/ly/wymusic.php"
 	case "migu":
-		url = "https://api.yuafeng.cn/API/ly/mgmusic.php"
+		APIurl = "https://api.yuafeng.cn/API/ly/mgmusic.php"
 	case "baidu":
-		url = "https://api.yuafeng.cn/API/ly/bdmusic.php"
+		APIurl = "https://api.yuafeng.cn/API/ly/bdmusic.php"
 	default:
 		return MusicItem{}
 	}
-	resp, err := http.Get(url + "?msg=" + song + "&n=1")
+	resp, err := http.Get(APIurl + "?msg=" + song + "&n=1")
 	if err != nil {
 		fmt.Println("[Error] Error fetching the data from Yuafeng free API:", err)
 		return MusicItem{}
@@ -149,15 +150,14 @@ func YuafengAPIResponseHandler(sources, song, singer string) MusicItem {
 		fmt.Println("[Error] Error creating m3u8 playlist:", err)
 	}
 
-	websiteURL := os.Getenv("WEBSITE_URL")
 	return MusicItem{
 		Title:        response.Data.Song,
 		Artist:       response.Data.Singer,
-		CoverURL:     websiteURL + "/cache/music/" + response.Data.Singer + "-" + response.Data.Song + "/cover" + ext,
-		LyricURL:     websiteURL + "/cache/music/" + response.Data.Singer + "-" + response.Data.Song + "/lyric.lrc",
-		AudioFullURL: websiteURL + "/cache/music/" + response.Data.Singer + "-" + response.Data.Song + "/music_full" + musicExt,
-		AudioURL:     websiteURL + "/cache/music/" + response.Data.Singer + "-" + response.Data.Song + "/music.mp3",
-		M3U8URL:      websiteURL + "/cache/music/" + response.Data.Singer + "-" + response.Data.Song + "/music.m3u8",
+		CoverURL:     "/cache/music/" + url.QueryEscape(response.Data.Singer+"-"+response.Data.Song) + "/cover" + ext,
+		LyricURL:     "/cache/music/" + url.QueryEscape(response.Data.Singer+"-"+response.Data.Song) + "/lyric.lrc",
+		AudioFullURL: "/cache/music/" + url.QueryEscape(response.Data.Singer+"-"+response.Data.Song) + "/music_full" + musicExt,
+		AudioURL:     "/cache/music/" + url.QueryEscape(response.Data.Singer+"-"+response.Data.Song) + "/music.mp3",
+		M3U8URL:      "/cache/music/" + url.QueryEscape(response.Data.Singer+"-"+response.Data.Song) + "/music.m3u8",
 		Duration:     duration,
 	}
 }

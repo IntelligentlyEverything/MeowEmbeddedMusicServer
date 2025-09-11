@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,7 +19,7 @@ func compressAndSegmentAudio(inputFile, outputDir string) error {
 	fmt.Printf("[Info] Compress and segment audio file %s\n", inputFile)
 	// Compress music files
 	outputFile := filepath.Join(outputDir, "music.mp3")
-	cmd := exec.Command("ffmpeg", "-i", inputFile, "-ac", "1", "-ab", "32k", "-ar", "16000", outputFile)
+	cmd := exec.Command("ffmpeg", "-i", inputFile, "-ac", "1", "-ab", "32k", "-ar", "24000", outputFile)
 	err := cmd.Run()
 	if err != nil {
 		return err
@@ -92,7 +93,7 @@ func createM3U8Playlist(outputDir string) error {
 		if err != nil {
 			return err
 		}
-		url := fmt.Sprintf("%s/cache/music/%s/%s/%s\n", os.Getenv("WEBSITE_URL"), filepath.Base(outputDir), "chunk", chunkFile)
+		url := fmt.Sprintf("%s/cache/music/%s/%s/%s\n", os.Getenv("EMBEDDED_WEBSITE_URL"), filepath.Base(outputDir), "chunk", chunkFile)
 		_, err = file.WriteString(url)
 	}
 
@@ -137,7 +138,7 @@ func getMusicDuration(filePath string) int {
 	return int(duration)
 }
 
-// Function for identifying file formats
+// Helper function for identifying file formats
 func getMusicFileExtension(url string) (string, error) {
 	resp, err := http.Head(url)
 	if err != nil {
@@ -183,14 +184,185 @@ func getMusicFileExtension(url string) (string, error) {
 	}
 }
 
+// Helper function to obtain music data from local folder
+func getLocalMusicItem(song, singer string) MusicItem {
+	musicDir := "./files/music"
+	fmt.Println("[Info] Reading local folder music.")
+	files, err := os.ReadDir(musicDir)
+	if err != nil {
+		fmt.Println("[Error] Failed to read local music directory:", err)
+		return MusicItem{}
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			if singer == "" {
+				if strings.Contains(file.Name(), song) {
+					dirPath := filepath.Join(musicDir, file.Name())
+					// Extract artist and title from the directory name
+					parts := strings.SplitN(file.Name(), "-", 2)
+					if len(parts) != 2 {
+						continue // Skip if the directory name doesn't contain exactly one "-"
+					}
+					artist := parts[0]
+					title := parts[1]
+					musicItem := MusicItem{
+						Title:        title,
+						Artist:       artist,
+						AudioURL:     "",
+						AudioFullURL: "",
+						M3U8URL:      "",
+						LyricURL:     "",
+						CoverURL:     "",
+						Duration:     0,
+					}
+
+					musicFilePath := filepath.Join(dirPath, "music.mp3")
+					if _, err := os.Stat(musicFilePath); err == nil {
+						musicItem.AudioURL = "/music/" + url.QueryEscape(file.Name()) + "/music.mp3"
+						musicItem.Duration = getMusicDuration(musicFilePath)
+					}
+
+					for _, audioFormat := range []string{"music_full.mp3", "music_full.flac", "music_full.wav", "music_full.aac", "music_full.ogg"} {
+						audioFilePath := filepath.Join(dirPath, audioFormat)
+						if _, err := os.Stat(audioFilePath); err == nil {
+							musicItem.AudioFullURL = "/music/" + url.QueryEscape(file.Name()) + "/" + audioFormat
+							break
+						}
+					}
+
+					m3u8FilePath := filepath.Join(dirPath, "music.m3u8")
+					if _, err := os.Stat(m3u8FilePath); err == nil {
+						musicItem.M3U8URL = "/music/" + url.QueryEscape(file.Name()) + "/music.m3u8"
+					}
+
+					lyricFilePath := filepath.Join(dirPath, "lyric.lrc")
+					if _, err := os.Stat(lyricFilePath); err == nil {
+						musicItem.LyricURL = "/music/" + url.QueryEscape(file.Name()) + "/lyric.lrc"
+					}
+
+					coverJpgFilePath := filepath.Join(dirPath, "cover.jpg")
+					if _, err := os.Stat(coverJpgFilePath); err == nil {
+						musicItem.CoverURL = "/music/" + url.QueryEscape(file.Name()) + "/cover.jpg"
+					} else {
+						coverPngFilePath := filepath.Join(dirPath, "cover.png")
+						if _, err := os.Stat(coverPngFilePath); err == nil {
+							musicItem.CoverURL = "/music/" + url.QueryEscape(file.Name()) + "/cover.png"
+						}
+					}
+
+					return musicItem
+				}
+			} else {
+				if strings.Contains(file.Name(), singer) && strings.Contains(file.Name(), song) {
+					dirPath := filepath.Join(musicDir, file.Name())
+					// Extract artist and title from the directory name
+					parts := strings.SplitN(file.Name(), "-", 2)
+					if len(parts) != 2 {
+						continue // Skip if the directory name doesn't contain exactly one "-"
+					}
+					artist := parts[0]
+					title := parts[1]
+					musicItem := MusicItem{
+						Title:        title,
+						Artist:       artist,
+						AudioURL:     "",
+						AudioFullURL: "",
+						M3U8URL:      "",
+						LyricURL:     "",
+						CoverURL:     "",
+						Duration:     0,
+					}
+
+					musicFilePath := filepath.Join(dirPath, "music.mp3")
+					if _, err := os.Stat(musicFilePath); err == nil {
+						musicItem.AudioURL = "/music/" + url.QueryEscape(file.Name()) + "/music.mp3"
+						musicItem.Duration = getMusicDuration(musicFilePath)
+					}
+
+					for _, audioFormat := range []string{"music_full.mp3", "music_full.flac", "music_full.wav", "music_full.aac", "music_full.ogg"} {
+						audioFilePath := filepath.Join(dirPath, audioFormat)
+						if _, err := os.Stat(audioFilePath); err == nil {
+							musicItem.AudioFullURL = "/music/" + url.QueryEscape(file.Name()) + "/" + audioFormat
+							break
+						}
+					}
+
+					m3u8FilePath := filepath.Join(dirPath, "music.m3u8")
+					if _, err := os.Stat(m3u8FilePath); err == nil {
+						musicItem.M3U8URL = "/music/" + url.QueryEscape(file.Name()) + "/music.m3u8"
+					}
+
+					lyricFilePath := filepath.Join(dirPath, "lyric.lrc")
+					if _, err := os.Stat(lyricFilePath); err == nil {
+						musicItem.LyricURL = "/music/" + url.QueryEscape(file.Name()) + "/lyric.lrc"
+					}
+
+					coverJpgFilePath := filepath.Join(dirPath, "cover.jpg")
+					if _, err := os.Stat(coverJpgFilePath); err == nil {
+						musicItem.CoverURL = "/music/" + url.QueryEscape(file.Name()) + "/cover.jpg"
+					} else {
+						coverPngFilePath := filepath.Join(dirPath, "cover.png")
+						if _, err := os.Stat(coverPngFilePath); err == nil {
+							musicItem.CoverURL = "/music/" + url.QueryEscape(file.Name()) + "/cover.png"
+						}
+					}
+
+					return musicItem
+				}
+			}
+		}
+	}
+
+	return MusicItem{} // If no matching folder is found, return an empty MusicItem
+}
+
+// Helper function to obtain IP address of the client
+func IPhandler(r *http.Request) (string, error) {
+	ip := r.Header.Get("X-Real-IP")
+	if ip != "" {
+		return ip, nil
+	}
+	ip = r.Header.Get("X-Forwarded-For")
+	if ip != "" {
+		ips := strings.Split(ip, ",")
+		return strings.TrimSpace(ips[0]), nil
+	}
+	ip = r.RemoteAddr
+	if ip != "" {
+		return strings.Split(ip, ":")[0], nil
+	}
+
+	return "", fmt.Errorf("unable to obtain IP address information")
+}
+
+// Helper function to read music sources from sources.json file
+func readSources() []MusicItem {
+	data, err := os.ReadFile("./sources.json")
+	fmt.Println("[Info] Reading local sources.json")
+	if err != nil {
+		fmt.Println("[Error] Failed to read sources.json:", err)
+		return nil
+	}
+
+	var sources []MusicItem
+	err = json.Unmarshal(data, &sources)
+	if err != nil {
+		fmt.Println("[Error] Failed to parse sources.json:", err)
+		return nil
+	}
+
+	return sources
+}
+
 // Helper function to request and cache music from API sources
-func requestAndCacheMusic(song, singer string) {
+func requestAndCacheMusic(song, singer string) MusicItem {
 	fmt.Printf("[Info] Requesting and caching music for %s", song)
 	// Create cache directory if it doesn't exist
 	err := os.MkdirAll("./cache", 0755)
 	if err != nil {
 		fmt.Println("[Error] Error creating cache directory:", err)
-		return
+		return MusicItem{}
 	}
 
 	// Get API_SOURCES and any subsequent environment variables (e.g. API_SOURCES_1, API_SOURCES_2, etc.)
@@ -223,7 +395,7 @@ func requestAndCacheMusic(song, singer string) {
 	// If no valid music item was found, return an empty MusicItem
 	if musicItem.Title == "" {
 		fmt.Printf("[Warning] No valid music item retrieved.\n")
-		return
+		return MusicItem{}
 	}
 
 	// Create cache file path based on artist and title
@@ -233,15 +405,16 @@ func requestAndCacheMusic(song, singer string) {
 	cacheData, err := json.MarshalIndent(musicItem, "", "  ")
 	if err != nil {
 		fmt.Println("[Error] Error marshalling cache data:", err)
-		return
+		return MusicItem{}
 	}
 	err = os.WriteFile(cacheFile, cacheData, 0644)
 	if err != nil {
 		fmt.Println("[Error] Error writing cache file:", err)
-		return
+		return MusicItem{}
 	}
 
 	fmt.Println("[Info] Music request and caching completed successfully.")
+	return musicItem
 }
 
 // Helper function to read music data from cache file
@@ -260,23 +433,4 @@ func readFromCache(filePath string) (MusicItem, bool) {
 	}
 
 	return musicItem, true
-}
-
-// Helper function to obtain IP address of the client
-func IPhandler(r *http.Request) (string, error) {
-	ip := r.Header.Get("X-Real-IP")
-	if ip != "" {
-		return ip, nil
-	}
-	ip = r.Header.Get("X-Forwarded-For")
-	if ip != "" {
-		ips := strings.Split(ip, ",")
-		return strings.TrimSpace(ips[0]), nil
-	}
-	ip = r.RemoteAddr
-	if ip != "" {
-		return strings.Split(ip, ":")[0], nil
-	}
-
-	return "", fmt.Errorf("unable to obtain IP address information")
 }

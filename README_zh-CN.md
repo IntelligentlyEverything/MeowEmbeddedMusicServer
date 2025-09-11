@@ -1,18 +1,20 @@
-# MeowEmbeddedMusicServer
+# Meow 为嵌入式设备制作的音乐串流服务
 [English](README.md) | [简体中文](README_zh-CN.md)
-Your Embedded Music Server for you.
+MeowEmbeddedMusicServer 是一个为嵌入式设备制作的音乐串流服务。
+它可以播放来自你的服务器的音乐，也可以为你的嵌入式设备提供音乐流媒体服务。
+它还可以管理音乐库，并且可以搜索和下载音乐。
 
-## Features
-- Play music from your server
-- Music streaming for your embedded devices
-- Music library management
-- Music search and cache
+## 特性
+- 在线听音乐
+- 为嵌入式设备提供音乐串流服务
+- 管理音乐库
+- 搜索和缓存音乐
 
-# Tutorial document
-Please refer to the [wiki](https://github.com/IntelligentlyEverything/MeowEmbeddedMusicServer/wiki).
+# 教程文档
+请参阅 [维基](https://github.com/IntelligentlyEverything/MeowEmbeddedMusicServer/wiki).
 
 
-## Star History
+## Star 历史
 
 <a href="https://star-history.com/#IntelligentlyEverything/MeowEmbeddedMusicServer&Date">
  <picture>

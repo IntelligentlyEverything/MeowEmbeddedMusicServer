@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
+	"net/url"
 	"path/filepath"
 	"strings"
 )
@@ -24,24 +24,79 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		ip = "0.0.0.0"
 	}
 
+	if song == "" {
+		musicItem := MusicItem{
+			FromCache: false,
+			IP:        ip,
+		}
+		json.NewEncoder(w).Encode(musicItem)
+		return
+	}
+
 	// Attempt to retrieve music items from sources.json
 	sources := readSources()
 
 	var musicItem MusicItem
 	var found bool = false
 
+	// Build request scheme
+	var scheme string
+	if r.TLS == nil {
+		scheme = "http"
+	} else {
+		scheme = "https"
+	}
+
 	for _, source := range sources {
 		if source.Title == song {
 			if singer == "" || source.Artist == singer {
+				// Determine the protocol for each URL and build accordingly
+				var audioURL, audioFullURL, m3u8URL, lyricURL, coverURL string
+				if strings.HasPrefix(source.AudioURL, "http://") {
+					audioURL = scheme + "://" + r.Host + "/url/http/" + url.QueryEscape(strings.TrimPrefix(source.AudioURL, "http://"))
+				} else if strings.HasPrefix(source.AudioURL, "https://") {
+					audioURL = scheme + "://" + r.Host + "/url/https/" + url.QueryEscape(strings.TrimPrefix(source.AudioURL, "https://"))
+				} else {
+					audioURL = scheme + "://" + r.Host + "/" + url.QueryEscape(source.AudioURL)
+				}
+				if strings.HasPrefix(source.AudioFullURL, "http://") {
+					audioFullURL = scheme + "://" + r.Host + "/url/http/" + url.QueryEscape(strings.TrimPrefix(source.AudioFullURL, "http://"))
+				} else if strings.HasPrefix(source.AudioFullURL, "https://") {
+					audioFullURL = scheme + "://" + r.Host + "/url/https/" + url.QueryEscape(strings.TrimPrefix(source.AudioFullURL, "https://"))
+				} else {
+					audioFullURL = scheme + "://" + r.Host + "/" + url.QueryEscape(source.AudioFullURL)
+				}
+				if strings.HasPrefix(source.M3U8URL, "http://") {
+					m3u8URL = scheme + "://" + r.Host + "/url/http/" + url.QueryEscape(strings.TrimPrefix(source.M3U8URL, "http://"))
+				} else if strings.HasPrefix(source.M3U8URL, "https://") {
+					m3u8URL = scheme + "://" + r.Host + "/url/https/" + url.QueryEscape(strings.TrimPrefix(source.M3U8URL, "https://"))
+				} else {
+					m3u8URL = scheme + "://" + r.Host + "/" + url.QueryEscape(source.M3U8URL)
+				}
+				if strings.HasPrefix(source.LyricURL, "http://") {
+					lyricURL = scheme + "://" + r.Host + "/url/http/" + url.QueryEscape(strings.TrimPrefix(source.LyricURL, "http://"))
+				} else if strings.HasPrefix(source.LyricURL, "https://") {
+					lyricURL = scheme + "://" + r.Host + "/url/https/" + url.QueryEscape(strings.TrimPrefix(source.LyricURL, "https://"))
+				} else {
+					lyricURL = scheme + "://" + r.Host + "/" + url.QueryEscape(source.LyricURL)
+				}
+				if strings.HasPrefix(source.CoverURL, "http://") {
+					coverURL = scheme + "://" + r.Host + "/url/http/" + url.QueryEscape(strings.TrimPrefix(source.CoverURL, "http://"))
+				} else if strings.HasPrefix(source.CoverURL, "https://") {
+					coverURL = scheme + "://" + r.Host + "/url/https/" + url.QueryEscape(strings.TrimPrefix(source.CoverURL, "https://"))
+				} else {
+					coverURL = scheme + "://" + r.Host + "/" + url.QueryEscape(source.CoverURL)
+				}
 				musicItem = MusicItem{
-					Title:     source.Title,
-					Artist:    source.Artist,
-					AudioURL:  source.AudioURL,
-					M3U8URL:   source.M3U8URL,
-					LyricURL:  source.LyricURL,
-					CoverURL:  source.CoverURL,
-					Duration:  source.Duration,
-					FromCache: false,
+					Title:        source.Title,
+					Artist:       source.Artist,
+					AudioURL:     audioURL,
+					AudioFullURL: audioFullURL,
+					M3U8URL:      m3u8URL,
+					LyricURL:     lyricURL,
+					CoverURL:     coverURL,
+					Duration:     source.Duration,
+					FromCache:    false,
 				}
 				found = true
 				break
@@ -54,6 +109,21 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		musicItem = getLocalMusicItem(song, singer)
 		musicItem.FromCache = false
 		if musicItem.Title != "" {
+			if musicItem.AudioURL != "" {
+				musicItem.AudioURL = scheme + "://" + r.Host + musicItem.AudioURL
+			}
+			if musicItem.AudioFullURL != "" {
+				musicItem.AudioFullURL = scheme + "://" + r.Host + musicItem.AudioFullURL
+			}
+			if musicItem.M3U8URL != "" {
+				musicItem.M3U8URL = scheme + "://" + r.Host + musicItem.M3U8URL
+			}
+			if musicItem.LyricURL != "" {
+				musicItem.LyricURL = scheme + "://" + r.Host + musicItem.LyricURL
+			}
+			if musicItem.CoverURL != "" {
+				musicItem.CoverURL = scheme + "://" + r.Host + musicItem.CoverURL
+			}
 			found = true
 		}
 	}
@@ -71,6 +141,21 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(filepath.Base(file), song) && (singer == "" || strings.Contains(filepath.Base(file), singer)) {
 				musicItem, found = readFromCache(file)
 				if found {
+					if musicItem.AudioURL != "" {
+						musicItem.AudioURL = scheme + "://" + r.Host + musicItem.AudioURL
+					}
+					if musicItem.AudioFullURL != "" {
+						musicItem.AudioFullURL = scheme + "://" + r.Host + musicItem.AudioFullURL
+					}
+					if musicItem.M3U8URL != "" {
+						musicItem.M3U8URL = scheme + "://" + r.Host + musicItem.M3U8URL
+					}
+					if musicItem.LyricURL != "" {
+						musicItem.LyricURL = scheme + "://" + r.Host + musicItem.LyricURL
+					}
+					if musicItem.CoverURL != "" {
+						musicItem.CoverURL = scheme + "://" + r.Host + musicItem.CoverURL
+					}
 					musicItem.FromCache = true
 					break
 				}
@@ -81,10 +166,15 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	// If still not found, request and cache the music item in a separate goroutine
 	if !found {
 		fmt.Println("[Info] Updating music item cache from API request.")
-		go func() {
-			requestAndCacheMusic(song, singer)
-			fmt.Println("[Info] Music item cache updated.")
-		}()
+		musicItem = requestAndCacheMusic(song, singer)
+		fmt.Println("[Info] Music item cache updated.")
+		musicItem.FromCache = false
+		musicItem.AudioURL = scheme + "://" + r.Host + musicItem.AudioURL
+		musicItem.AudioFullURL = scheme + "://" + r.Host + musicItem.AudioFullURL
+		musicItem.M3U8URL = scheme + "://" + r.Host + musicItem.M3U8URL
+		musicItem.LyricURL = scheme + "://" + r.Host + musicItem.LyricURL
+		musicItem.CoverURL = scheme + "://" + r.Host + musicItem.CoverURL
+		found = true
 	}
 
 	// If still not found, return an empty MusicItem
@@ -98,156 +188,4 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(musicItem)
-}
-
-// Read sources.json file and return a list of SourceItem.
-func readSources() []MusicItem {
-	data, err := os.ReadFile("./sources.json")
-	fmt.Println("[Info] Reading local sources.json")
-	if err != nil {
-		fmt.Println("[Error] Failed to read sources.json:", err)
-		return nil
-	}
-
-	var sources []MusicItem
-	err = json.Unmarshal(data, &sources)
-	if err != nil {
-		fmt.Println("[Error] Failed to parse sources.json:", err)
-		return nil
-	}
-
-	return sources
-}
-
-// Retrieve music items from local folder
-func getLocalMusicItem(song, singer string) MusicItem {
-	musicDir := "./files/music"
-	fmt.Println("[Info] Reading local folder music.")
-	files, err := os.ReadDir(musicDir)
-	if err != nil {
-		fmt.Println("[Error] Failed to read local music directory:", err)
-		return MusicItem{}
-	}
-
-	for _, file := range files {
-		if file.IsDir() {
-			if singer == "" {
-				if strings.Contains(file.Name(), song) {
-					dirPath := filepath.Join(musicDir, file.Name())
-					// Extract artist and title from the directory name
-					parts := strings.SplitN(file.Name(), "-", 2)
-					if len(parts) != 2 {
-						continue // Skip if the directory name doesn't contain exactly one "-"
-					}
-					artist := parts[0]
-					title := parts[1]
-					musicItem := MusicItem{
-						Title:        title,
-						Artist:       artist,
-						AudioURL:     "",
-						AudioFullURL: "",
-						M3U8URL:      "",
-						LyricURL:     "",
-						CoverURL:     "",
-						Duration:     0,
-					}
-
-					musicFilePath := filepath.Join(dirPath, "music.mp3")
-					if _, err := os.Stat(musicFilePath); err == nil {
-						musicItem.AudioURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/music.mp3"
-						musicItem.Duration = getMusicDuration(musicFilePath)
-					}
-
-					for _, audioFormat := range []string{"music_full.mp3", "music_full.flac", "music_full.wav", "music_full.aac", "music_full.ogg"} {
-						audioFilePath := filepath.Join(dirPath, audioFormat)
-						if _, err := os.Stat(audioFilePath); err == nil {
-							musicItem.AudioFullURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/" + audioFormat
-							break
-						}
-					}
-
-					m3u8FilePath := filepath.Join(dirPath, "music.m3u8")
-					if _, err := os.Stat(m3u8FilePath); err == nil {
-						musicItem.M3U8URL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/music.m3u8"
-					}
-
-					lyricFilePath := filepath.Join(dirPath, "lyric.lrc")
-					if _, err := os.Stat(lyricFilePath); err == nil {
-						musicItem.LyricURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/lyric.lrc"
-					}
-
-					coverJpgFilePath := filepath.Join(dirPath, "cover.jpg")
-					if _, err := os.Stat(coverJpgFilePath); err == nil {
-						musicItem.CoverURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/cover.jpg"
-					} else {
-						coverPngFilePath := filepath.Join(dirPath, "cover.png")
-						if _, err := os.Stat(coverPngFilePath); err == nil {
-							musicItem.CoverURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/cover.png"
-						}
-					}
-
-					return musicItem
-				}
-			} else {
-				if strings.Contains(file.Name(), singer) && strings.Contains(file.Name(), song) {
-					dirPath := filepath.Join(musicDir, file.Name())
-					// Extract artist and title from the directory name
-					parts := strings.SplitN(file.Name(), "-", 2)
-					if len(parts) != 2 {
-						continue // Skip if the directory name doesn't contain exactly one "-"
-					}
-					artist := parts[0]
-					title := parts[1]
-					musicItem := MusicItem{
-						Title:        title,
-						Artist:       artist,
-						AudioURL:     "",
-						AudioFullURL: "",
-						M3U8URL:      "",
-						LyricURL:     "",
-						CoverURL:     "",
-						Duration:     0,
-					}
-
-					musicFilePath := filepath.Join(dirPath, "music.mp3")
-					if _, err := os.Stat(musicFilePath); err == nil {
-						musicItem.AudioURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/music.mp3"
-						musicItem.Duration = getMusicDuration(musicFilePath)
-					}
-
-					for _, audioFormat := range []string{"music_full.mp3", "music_full.flac", "music_full.wav", "music_full.aac", "music_full.ogg"} {
-						audioFilePath := filepath.Join(dirPath, audioFormat)
-						if _, err := os.Stat(audioFilePath); err == nil {
-							musicItem.AudioFullURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/" + audioFormat
-							break
-						}
-					}
-
-					m3u8FilePath := filepath.Join(dirPath, "music.m3u8")
-					if _, err := os.Stat(m3u8FilePath); err == nil {
-						musicItem.M3U8URL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/music.m3u8"
-					}
-
-					lyricFilePath := filepath.Join(dirPath, "lyric.lrc")
-					if _, err := os.Stat(lyricFilePath); err == nil {
-						musicItem.LyricURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/lyric.lrc"
-					}
-
-					coverJpgFilePath := filepath.Join(dirPath, "cover.jpg")
-					if _, err := os.Stat(coverJpgFilePath); err == nil {
-						musicItem.CoverURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/cover.jpg"
-					} else {
-						coverPngFilePath := filepath.Join(dirPath, "cover.png")
-						if _, err := os.Stat(coverPngFilePath); err == nil {
-							musicItem.CoverURL = os.Getenv("WEBSITE_URL") + "/music/" + file.Name() + "/cover.png"
-						}
-					}
-
-					return musicItem
-				}
-			}
-		}
-	}
-
-	return MusicItem{} // If no matching folder is found, return an empty MusicItem
 }

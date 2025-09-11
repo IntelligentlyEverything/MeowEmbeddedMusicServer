@@ -25,6 +25,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		defaultIndexPage(w)
 	} else {
 		http.ServeFile(w, r, indexPath)
+		fmt.Printf("[Web Access] Return custom index pages\n")
 	}
 }
 
@@ -372,4 +373,5 @@ func defaultIndexPage(w http.ResponseWriter) {
 	// Hide stream_pcm response
 	fmt.Fprintf(w, "hideStreamPcmBtn.addEventListener('click', function () {streamPcm.style.display = 'none';showStreamPcmBtn.style.display = 'block';hideStreamPcmBtn.style.display = 'none';});")
 	fmt.Fprintf(w, "</script></body></html>")
+	fmt.Printf("[Web Access] Return default index pages\n")
 }
