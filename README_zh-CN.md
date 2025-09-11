@@ -1,5 +1,6 @@
 # Meow 为嵌入式设备制作的音乐串流服务
 [English](README.md) | [简体中文](README_zh-CN.md)
+
 MeowEmbeddedMusicServer 是一个为嵌入式设备制作的音乐串流服务。
 它可以播放来自你的服务器的音乐，也可以为你的嵌入式设备提供音乐流媒体服务。
 它还可以管理音乐库，并且可以搜索和下载音乐。
