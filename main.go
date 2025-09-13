@@ -39,9 +39,12 @@ func main() {
 
 	// Create a server instance
 	srv := &http.Server{
-		Addr:         ":" + port,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:              ":" + port,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      0,                // Disable the timeout for the response writer
+		IdleTimeout:       30 * time.Minute, // Set the maximum duration for idle connections
+		ReadHeaderTimeout: 10 * time.Second, // Limit the maximum duration for reading the headers of the request
+		MaxHeaderBytes:    1 << 16,          // Limit the maximum request header size to 64KB
 	}
 
 	// Start the server
